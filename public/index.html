@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NCH Binary MLM Platform | Sovereign Yield & Tree Visualizer</title>
+    <title>NCH Sovereign Network | Sovereign Yield & Tree Visualizer</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -16,7 +16,7 @@
         <div class="nav-brand">
             <div class="logo-circle">🧀</div>
             <div class="brand-text">
-                <span class="brand-title">NCH Binary MLM</span>
+                <span class="brand-title">NCH Sovereign Network</span>
                 <span class="brand-sub">Sovereign Ecosystem</span>
             </div>
         </div>
@@ -33,16 +33,56 @@
     </header>
 
     <main class="container">
+        <!-- Referral Info Banner -->
+        <div id="referralBanner" class="referral-banner hidden">
+            <span class="banner-icon">🌟</span>
+            <span id="referralBannerText">You are invited to join the network!</span>
+        </div>
+
         <!-- Hero Header -->
         <section class="hero-section">
             <div class="hero-content">
-                <h1>NCH Sovereign Binary Network</h1>
+                <h1>NCH Sovereign Network</h1>
                 <p>Maximize your yield with 10% weak-leg pair matching, auto-spillover placement, and real-time tree analytics.</p>
             </div>
             <div class="wallet-card" id="userWalletCard">
                 <span class="wallet-label">ACTIVE WALLET NODE</span>
                 <span class="wallet-address" id="activeAddress">Not Connected</span>
                 <span class="wallet-rank-badge" id="activeRank">Member</span>
+            </div>
+        </section>
+
+        <!-- Node Activation Section (Hidden by Default) -->
+        <section id="activationSection" class="glass-card activation-card hidden">
+            <div class="activation-header">
+                <h2>⚡ Activate Sovereign Node</h2>
+                <p>To participate in the NCH Sovereign Network, receive rewards, and view your downline tree, you must register your node on the network.</p>
+            </div>
+            
+            <div class="activation-form">
+                <div class="form-group">
+                    <label>Your Node Wallet Address</label>
+                    <input type="text" id="activationYourAddress" readonly value="Not Connected" class="input-readonly">
+                </div>
+                
+                <div class="form-group">
+                    <label>Sponsor Wallet Address / Referral Code</label>
+                    <input type="text" id="activationSponsorInput" placeholder="Enter sponsor address (or default to Genesis node)">
+                    <small class="form-help">Enter a sponsor's address or referral code. If you don't have one, it defaults to the Genesis root node.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Placement Position</label>
+                    <div class="leg-selector">
+                        <button type="button" class="leg-btn active" id="activationLegL" onclick="selectActivationLeg('L')">Left Leg (L)</button>
+                        <button type="button" class="leg-btn" id="activationLegR" onclick="selectActivationLeg('R')">Right Leg (R)</button>
+                    </div>
+                    <small class="form-help">Specify which of the sponsor's extreme legs to be placed under.</small>
+                </div>
+                
+                <button class="btn-primary btn-large" onclick="activateSovereignNode()">
+                    ⚡ Activate Node & Join Network
+                </button>
             </div>
         </section>
 
@@ -87,14 +127,14 @@
 
         <!-- Main Workspace: Tree Visualizer & Actions -->
         <div class="workspace-grid">
-            <!-- Left Side: Interactive Binary Tree -->
+            <!-- Left Side: Interactive Tree -->
             <div class="glass-card tree-card">
                 <div class="card-header">
-                    <h2>🌲 Interactive Binary Tree Visualizer</h2>
+                    <h2>🌲 Interactive Tree Visualizer</h2>
                     <button class="btn-secondary" onclick="refreshTree()">🔄 Refresh Tree</button>
                 </div>
                 <div class="tree-container" id="treeContainer">
-                    <div class="tree-placeholder">Connect a wallet or enter an address to view the Binary Tree</div>
+                    <div class="tree-placeholder">Connect a wallet or enter an address to view the Tree</div>
                 </div>
             </div>
 
@@ -188,7 +228,7 @@
     </main>
 
     <footer class="footer">
-        <p>© 2026 NCH Binary MLM Platform. Dedicated Sovereign Infrastructure.</p>
+        <p>© 2026 NCH Sovereign Network. Dedicated Sovereign Infrastructure.</p>
     </footer>
 
     <script src="app.js"></script>

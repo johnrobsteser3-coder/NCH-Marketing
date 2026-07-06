@@ -36,6 +36,12 @@ serverProcess.stdout.on('data', async (data) => {
             assert.strictEqual(tree.success, true);
             console.log('✅ /api/mlm/tree HTTP endpoint OK');
 
+            // Test 5: Resolve Referral via HTTP
+            const resolve = await fetchJSON('http://localhost:4000/api/mlm/resolve-ref/CHEESE-0E6EC671');
+            assert.strictEqual(resolve.success, true);
+            assert.strictEqual(resolve.walletAddress, '0x0e6ec6713e7b5b7c11d969da848813d08223598e');
+            console.log('✅ /api/mlm/resolve-ref HTTP endpoint OK');
+
             console.log('\n🎉 ALL EXPRESS HTTP ENDPOINTS TESTED PERFECTLY!\n');
             serverProcess.kill();
             process.exit(0);

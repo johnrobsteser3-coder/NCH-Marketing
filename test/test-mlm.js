@@ -86,6 +86,15 @@ async function runTests() {
     assert.notStrictEqual(treeObj.rightChild, null);
     console.log('✅ Visual tree structure generated with Left & Right branches.');
 
+    // 9. Test Referral Code Prefix Resolution
+    console.log('\n9️⃣ Testing Referral Code prefix lookup resolution...');
+    const resolvedGenesis = await mlmEngine.resolveReferralCode('CHEESE-0E6EC671');
+    assert.strictEqual(resolvedGenesis.toLowerCase(), rootWallet.toLowerCase());
+    
+    const resolvedFullHex = await mlmEngine.resolveReferralCode('0x0e6ec6713e7b5b7c11d969da848813d08223598e');
+    assert.strictEqual(resolvedFullHex.toLowerCase(), rootWallet.toLowerCase());
+    console.log(`✅ Referral prefix lookup matches perfectly. Resolved: ${resolvedGenesis}`);
+
     // Cleanup
     if (fs.existsSync(testDbPath)) fs.unlinkSync(testDbPath);
 

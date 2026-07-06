@@ -303,6 +303,35 @@ class NLMMatchingEngine {
             recentCommissions: commissions
         };
     }
+
+    /**
+     * Resolve a referral code or wallet address prefix to a full wallet address
+     */
+    async resolveReferralCode(code) {
+        if (!code) return null;
+        
+        let cleaned = code.trim().toLowerCase();
+        
+        // If it starts with CHEESE-, extract the suffix
+        if (cleaned.startsWith('cheese-')) {
+            cleaned = cleaned.substring(7);
+        }
+        
+        // If it starts with 0x, remove the prefix
+        if (cleaned.startsWith('0x')) {
+            cleaned = cleaned.substring(2);
+        }
+        
+        if (cleaned.length < 4) return null;
+        
+        const row = await db.get(
+            `SELECT walletAddress FROM binary_tree WHERE LOWER(walletAddress) LIKE ? LIMIT 1`,
+            [`0x${cleaned}%`]
+        );
+        
+        return row ? row.walletAddress : null;
+    }
 }
 
 module.exports = new NLMMatchingEngine();
+

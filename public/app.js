@@ -1,9 +1,10 @@
 /**
- * NCH Binary MLM Dashboard Client Logic
+ * NCH Sovereign Network Dashboard Client Logic
  */
 
 let currentWallet = '0x0e6ec6713e7b5b7c11d969da848813d08223598e'; // Default demo wallet
 let selectedLeg = 'L';
+let selectedActivationLeg = 'L'; // Leg choice inside the activation card
 
 document.addEventListener('DOMContentLoaded', () => {
     // Auto-check for ref code in URL
@@ -13,17 +14,50 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Check URL query params for ?ref=CHEESE-XXXX&leg=L
-function checkURLParams() {
+async function checkURLParams() {
     const urlParams = new URLSearchParams(window.location.search);
     const ref = urlParams.get('ref');
     const leg = urlParams.get('leg');
 
     if (ref) {
         console.log(`🎁 Referral detected from URL: ${ref}`);
-        localStorage.setItem('pendingRef', ref);
+        localStorage.setItem('pendingRefCode', ref);
+        
+        // Show banner showing loading status
+        const banner = document.getElementById('referralBanner');
+        const bannerText = document.getElementById('referralBannerText');
+        banner.classList.remove('hidden');
+        bannerText.textContent = `Resolving sponsor invitation for code: ${ref}...`;
+
+        // If it is a full hex address, use it directly
+        if (/^0x[a-fA-F0-9]{40}$/.test(ref)) {
+            const normalizedRef = ref.toLowerCase();
+            localStorage.setItem('pendingSponsorAddress', normalizedRef);
+            bannerText.textContent = `Sponsor invitation detected: Node ${normalizedRef.slice(0, 6)}...${normalizedRef.slice(-4)}`;
+        } else {
+            // Resolve short code via API
+            try {
+                const res = await fetch(`/api/mlm/resolve-ref/${ref}`);
+                const data = await res.json();
+                if (data.success && data.walletAddress) {
+                    localStorage.setItem('pendingSponsorAddress', data.walletAddress);
+                    bannerText.textContent = `Sponsor invitation detected: Node ${data.walletAddress.slice(0, 6)}...${data.walletAddress.slice(-4)}`;
+                } else {
+                    bannerText.textContent = `⚠️ Invitation code "${ref}" could not be resolved. Joining under Genesis.`;
+                    localStorage.removeItem('pendingSponsorAddress');
+                }
+            } catch (e) {
+                console.warn('Failed to resolve referral code:', e.message);
+                bannerText.textContent = `⚠️ Error resolving invitation. Joining under Genesis.`;
+            }
+        }
     }
+    
     if (leg && (leg.toUpperCase() === 'R' || leg.toUpperCase() === 'L')) {
-        selectLeg(leg.toUpperCase());
+        const uppercaseLeg = leg.toUpperCase();
+        localStorage.setItem('pendingLeg', uppercaseLeg);
+        selectLeg(uppercaseLeg);
+        selectActivationLeg(uppercaseLeg);
     }
 }
 
@@ -43,19 +77,26 @@ async function connectWallet() {
         }
     }
 
-    const inputAddr = prompt('Enter NCH Wallet Address to View MLM Dashboard:', currentWallet);
+    const inputAddr = prompt('Enter NCH Wallet Address to View Sovereign Dashboard:', currentWallet);
     if (inputAddr) {
         currentWallet = inputAddr.trim().toLowerCase();
         loadWalletData(currentWallet);
     }
 }
 
-// Select Leg Preference (Left vs Right)
+// Select Leg Preference for Referral Link Generator
 function selectLeg(leg) {
     selectedLeg = leg === 'R' ? 'R' : 'L';
     document.getElementById('legBtnL').classList.toggle('active', selectedLeg === 'L');
     document.getElementById('legBtnR').classList.toggle('active', selectedLeg === 'R');
     updateShareLinks();
+}
+
+// Select Leg Preference inside Node Activation form
+function selectActivationLeg(leg) {
+    selectedActivationLeg = leg === 'R' ? 'R' : 'L';
+    document.getElementById('activationLegL').classList.toggle('active', selectedActivationLeg === 'L');
+    document.getElementById('activationLegR').classList.toggle('active', selectedActivationLeg === 'R');
 }
 
 // Load Wallet Stats & Tree Structure
@@ -68,9 +109,22 @@ async function loadWalletData(address) {
     try {
         // 1. Fetch Stats
         const statsRes = await fetch(`/api/mlm/stats/${address}`);
+        
+        if (statsRes.status === 404) {
+            console.warn('Wallet not registered in Sovereign Network, prompting activation...');
+            showActivationView(address);
+            return;
+        }
+
         const statsData = await statsRes.json();
 
         if (statsData.success && statsData.stats) {
+            // Hide activation card, show main dashboard sections
+            document.getElementById('activationSection').classList.add('hidden');
+            document.querySelector('.stats-grid').classList.remove('hidden');
+            document.querySelector('.workspace-grid').classList.remove('hidden');
+            document.querySelector('.glass-card.full-width').classList.remove('hidden');
+
             const s = statsData.stats;
             document.getElementById('leftVol').textContent = `${s.leftVolume.toLocaleString()} NCH`;
             document.getElementById('leftCarry').textContent = `Carryover: ${s.leftCarryover.toLocaleString()} NCH`;
@@ -84,9 +138,6 @@ async function loadWalletData(address) {
 
             // Populate Commission Table
             renderCommissions(s.recentCommissions || []);
-        } else {
-            console.warn('Wallet not registered in MLM Tree, auto-registering genesis/node...');
-            await autoRegister(address);
         }
 
         // 2. Fetch Tree
@@ -97,18 +148,87 @@ async function loadWalletData(address) {
     }
 }
 
-// Auto Register Node if not in DB
-async function autoRegister(address) {
+// Show Node Activation view for unregistered addresses
+function showActivationView(address) {
+    // Hide main dashboard grids
+    document.querySelector('.stats-grid').classList.add('hidden');
+    document.querySelector('.workspace-grid').classList.add('hidden');
+    document.querySelector('.glass-card.full-width').classList.add('hidden');
+
+    // Show activation card
+    const actSection = document.getElementById('activationSection');
+    actSection.classList.remove('hidden');
+
+    document.getElementById('activationYourAddress').value = address;
+
+    // Prefill sponsor
+    const pendingSponsor = localStorage.getItem('pendingSponsorAddress');
+    // If we have a pending sponsor, use it; otherwise default to Genesis address
+    document.getElementById('activationSponsorInput').value = pendingSponsor || '0x0e6ec6713e7b5b7c11d969da848813d08223598e';
+
+    // Prefill leg
+    const pendingLeg = localStorage.getItem('pendingLeg') || 'L';
+    selectActivationLeg(pendingLeg);
+}
+
+// Action called when user clicks "Activate Node & Join Network"
+async function activateSovereignNode() {
+    const yourAddress = document.getElementById('activationYourAddress').value.trim().toLowerCase();
+    const sponsorInput = document.getElementById('activationSponsorInput').value.trim();
+    const targetLeg = selectedActivationLeg;
+
+    if (!yourAddress || yourAddress === 'not connected') {
+        alert('Please connect your wallet first.');
+        return;
+    }
+
     try {
-        await fetch('/api/mlm/register', {
+        let finalSponsor = sponsorInput;
+        
+        // Resolve code if it's not a full address
+        if (sponsorInput && !/^0x[a-fA-F0-9]{40}$/.test(sponsorInput)) {
+            const res = await fetch(`/api/mlm/resolve-ref/${sponsorInput}`);
+            const data = await res.json();
+            if (data.success && data.walletAddress) {
+                finalSponsor = data.walletAddress;
+            } else {
+                alert(`❌ Could not resolve sponsor code "${sponsorInput}". Please double check it.`);
+                return;
+            }
+        }
+
+        const regRes = await fetch('/api/mlm/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ walletAddress: address, sponsorAddress: null, preferredLeg: 'L' })
+            body: JSON.stringify({
+                walletAddress: yourAddress,
+                sponsorAddress: finalSponsor || null,
+                preferredLeg: targetLeg
+            })
         });
+        const regData = await regRes.json();
+
+        if (regData.success) {
+            alert(`🎉 Sovereign Node Activated Successfully! Placement: ${regData.placementType}`);
+            
+            // Clear pending invitation from local storage
+            localStorage.removeItem('pendingRefCode');
+            localStorage.removeItem('pendingSponsorAddress');
+            localStorage.removeItem('pendingLeg');
+            
+            // Hide referral banner
+            document.getElementById('referralBanner').classList.add('hidden');
+
+            // Reload statistics
+            loadWalletData(yourAddress);
+        } else {
+            alert(`❌ Activation failed: ${regData.error}`);
+        }
     } catch (e) {
-        console.error('Auto register failed:', e.message);
+        alert(`Error: ${e.message}`);
     }
 }
+
 
 // Update Referral Links
 function updateShareLinks() {
@@ -134,7 +254,7 @@ function copyShareLink() {
     alert(`✅ Share Link copied to clipboard!`);
 }
 
-// Refresh Interactive Binary Tree
+// Refresh Interactive Tree
 async function refreshTree() {
     const container = document.getElementById('treeContainer');
     try {
@@ -272,7 +392,7 @@ async function triggerMatching() {
         if (data.success && data.result) {
             const r = data.result;
             if (r.paid > 0) {
-                alert(`💰 Success! Paid ${r.paid} NCH binary matching bonus on ${r.weakLegVolume} weak leg volume!`);
+                alert(`💰 Success! Paid ${r.paid} NCH matching bonus on ${r.weakLegVolume} weak leg volume!`);
             } else {
                 alert(`ℹ️ Calculation done: ${r.reason || 'No weak leg matching volume to pay'}`);
             }

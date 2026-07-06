@@ -14,7 +14,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
-        service: 'NCH-Marketing Binary MLM Server',
+        service: 'NCH-Marketing Sovereign Server',
         timestamp: Date.now(),
         version: '1.0.0'
     });
@@ -106,11 +106,27 @@ app.get('/api/mlm/stats/:address', async (req, res) => {
     }
 });
 
+// 6. Resolve referral code/prefix to full wallet address
+app.get('/api/mlm/resolve-ref/:code', async (req, res) => {
+    try {
+        const { code } = req.params;
+        const walletAddress = await mlmEngine.resolveReferralCode(code);
+        if (!walletAddress) {
+            return res.status(404).json({ success: false, error: 'Referral code not found' });
+        }
+        res.json({ success: true, walletAddress });
+    } catch (error) {
+        console.error('❌ Resolve API Error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Serve frontend SPA fallback
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 NCH-Marketing Binary MLM Server running on port ${PORT}`);
+    console.log(`🚀 NCH-Marketing Sovereign Server running on port ${PORT}`);
 });
+
