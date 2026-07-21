@@ -58,6 +58,50 @@ class MLMDatabase {
                 )
             `);
 
+            // Users Profiles & System status (Web3 Wallet Address Primary Key)
+            this.db.run(`
+                CREATE TABLE IF NOT EXISTS users (
+                    walletAddress TEXT PRIMARY KEY,
+                    username TEXT UNIQUE,
+                    referrerUsername TEXT,
+                    legPreference TEXT DEFAULT 'L',
+                    isActive INTEGER DEFAULT 0,
+                    packageUsdt REAL DEFAULT 0,
+                    withdrawableUsdt REAL DEFAULT 0,
+                    rank TEXT DEFAULT 'Member',
+                    joinedAt INTEGER,
+                    packageActivatedAt INTEGER DEFAULT 0,
+                    isAdmin INTEGER DEFAULT 0
+                )
+            `);
+
+            // Migration safeties for existing databases
+            this.db.run("ALTER TABLE users ADD COLUMN packageActivatedAt INTEGER DEFAULT 0", () => {});
+            this.db.run("ALTER TABLE users ADD COLUMN isAdmin INTEGER DEFAULT 0", () => {});
+
+            // Withdrawals Log
+            this.db.run(`
+                CREATE TABLE IF NOT EXISTS withdrawals (
+                    id TEXT PRIMARY KEY,
+                    walletAddress TEXT,
+                    amountUsdt REAL,
+                    status TEXT DEFAULT 'PENDING',
+                    timestamp INTEGER
+                )
+            `);
+
+            // System Settings
+            this.db.run(`
+                CREATE TABLE IF NOT EXISTS system_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT
+                )
+            `, () => {
+                // Seed initial settings
+                this.db.run("INSERT OR IGNORE INTO system_settings (key, value) VALUES ('nch_usdt_price', '0.02')");
+                this.db.run("INSERT OR REPLACE INTO system_settings (key, value) VALUES ('platform_master_address', '0x3801490C9f806c917b8CbA710Db9135FA3B116ae')");
+            });
+
             console.log('✅ MLM SQLite Tables initialized successfully');
         });
     }

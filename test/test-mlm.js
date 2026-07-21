@@ -57,26 +57,18 @@ async function runTests() {
     assert.strictEqual(statsRoot.leftCarryover, 10000);
     console.log(`✅ Left leg volume bubbled up to root: Left Vol = ${statsRoot.leftVolume} NCH.`);
 
-    // 6. Add Volume to Right Branch
+    // 6. Add Volume to Right Branch (Triggers Automatic Binary Pairing Bonus)
     console.log('\n6️⃣ Testing Volume Addition (Right Leg: 6,000 NCH)...');
     const volR = await mlmEngine.addVolume(rightChild1, 6000);
     assert.strictEqual(volR.success, true);
 
     statsRoot = await mlmEngine.getStats(rootWallet);
     assert.strictEqual(statsRoot.rightVolume, 6000);
-    assert.strictEqual(statsRoot.rightCarryover, 6000);
-    console.log(`✅ Right leg volume bubbled up to root: Right Vol = ${statsRoot.rightVolume} NCH.`);
-
-    // 7. Calculate Weak Leg Binary Pair Matching Bonus
-    console.log('\n7️⃣ Testing Weaker Leg Binary Pair Matching Payout & Carryover Calculation...');
-    // Left Carryover = 10,000 NCH, Right Carryover = 6,000 NCH.
-    // Weak leg = 6,000 NCH. 10% bonus = 600 NCH.
-    const matchRes = await mlmEngine.calculateMatchingBonus(rootWallet);
-    assert.strictEqual(matchRes.weakLegVolume, 6000);
-    assert.strictEqual(matchRes.paid, 600);
-    assert.strictEqual(matchRes.leftCarryover, 4000); // 10000 - 6000
-    assert.strictEqual(matchRes.rightCarryover, 0);   // 6000 - 6000
-    console.log(`✅ Binary Pair Matching Verified! Paid: ${matchRes.paid} NCH. New Left Carryover: ${matchRes.leftCarryover} NCH. New Right Carryover: ${matchRes.rightCarryover} NCH.`);
+    // Automatic pairing bonus calculated: 6,000 weak leg matched, leaving 4,000 Left Carryover and 0 Right Carryover
+    assert.strictEqual(statsRoot.leftCarryover, 4000);
+    assert.strictEqual(statsRoot.rightCarryover, 0);
+    assert.strictEqual(statsRoot.totalEarned, 600); // 10% of 6,000 = 600 USDT
+    console.log(`✅ Automatic Binary Pair Matching Payout Verified! Paid: 600 USDT. New Left Carryover: ${statsRoot.leftCarryover} USDT. New Right Carryover: ${statsRoot.rightCarryover} USDT.`);
 
     // 8. Test Visual Tree Hierarchy Retrieval
     console.log('\n8️⃣ Testing Visual Tree Hierarchy Generation...');
@@ -88,12 +80,24 @@ async function runTests() {
 
     // 9. Test Referral Code Prefix Resolution
     console.log('\n9️⃣ Testing Referral Code prefix lookup resolution...');
-    const resolvedGenesis = await mlmEngine.resolveReferralCode('CHEESE-0E6EC671');
+    const resolvedGenesis = await mlmEngine.resolveReferralCode('TIER-0E6EC671');
     assert.strictEqual(resolvedGenesis.toLowerCase(), rootWallet.toLowerCase());
     
     const resolvedFullHex = await mlmEngine.resolveReferralCode('0x0e6ec6713e7b5b7c11d969da848813d08223598e');
     assert.strictEqual(resolvedFullHex.toLowerCase(), rootWallet.toLowerCase());
     console.log(`✅ Referral prefix lookup matches perfectly. Resolved: ${resolvedGenesis}`);
+
+    // 10. Test Daily Yield Calculation
+    console.log('\n🔟 Testing Daily Yield Process Calculation...');
+    const db = require('../db');
+    await db.run(
+        "INSERT INTO users (walletAddress, username, isActive, packageUsdt, withdrawableUsdt, joinedAt) VALUES (?, 'yield_tester', 1, 1000, 0, ?)",
+        [rootWallet, Date.now()]
+    );
+    const yields = await mlmEngine.processDailyYields();
+    assert.strictEqual(yields.length, 1);
+    assert.strictEqual(yields[0].amount, 10); // 1000 * 1.0% = 10 USDT
+    console.log('✅ Daily Yield Calculation verified (1000 USDT @ 1.0% = 10 USDT).');
 
     // Cleanup
     if (fs.existsSync(testDbPath)) fs.unlinkSync(testDbPath);

@@ -4,231 +4,430 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NCH Sovereign Network | Sovereign Yield & Tree Visualizer</title>
+    <title>Tier Leverage | Sovereign Yield & Tree Visualizer</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    
 </head>
 
 <body>
     <div class="glow-bg"></div>
 
-    <header class="navbar">
-        <div class="nav-brand">
-            <div class="logo-circle">🧀</div>
-            <div class="brand-text">
-                <span class="brand-title">NCH Sovereign Network</span>
-                <span class="brand-sub">Sovereign Ecosystem</span>
+    <!-- Login View -->
+    <div id="loginView" class="login-container">
+        <div class="glass-card login-card">
+            <div class="logo-circle" style="margin: 0 auto 1.5rem auto;">⚡</div>
+            <h1 style="text-align: center; margin-bottom: 0.5rem; font-weight: 800;">Tier Leverage</h1>
+            <!-- Sponsor Banner if invited -->
+            <div id="loginRefBanner" class="referral-banner hidden" style="margin-bottom: 1.5rem;">
+                <span id="loginRefText">Sponsor Invitation detected</span>
             </div>
-        </div>
 
-        <div class="nav-right">
-            <div class="status-badge">
-                <span class="pulse-dot"></span>
-                <span>Mainnet Connected</span>
-            </div>
-            <button id="connectWalletBtn" class="btn-primary" onclick="connectWallet()">
-                <span>⚡ Connect Wallet</span>
-            </button>
-        </div>
-    </header>
-
-    <main class="container">
-        <!-- Referral Info Banner -->
-        <div id="referralBanner" class="referral-banner hidden">
-            <span class="banner-icon">🌟</span>
-            <span id="referralBannerText">You are invited to join the network!</span>
-        </div>
-
-        <!-- Hero Header -->
-        <section class="hero-section">
-            <div class="hero-content">
-                <h1>NCH Sovereign Network</h1>
-                <p>Maximize your yield with 10% weak-leg pair matching, auto-spillover placement, and real-time tree analytics.</p>
-            </div>
-            <div class="wallet-card" id="userWalletCard">
-                <span class="wallet-label">ACTIVE WALLET NODE</span>
-                <span class="wallet-address" id="activeAddress">Not Connected</span>
-                <span class="wallet-rank-badge" id="activeRank">Member</span>
-            </div>
-        </section>
-
-        <!-- Node Activation Section (Hidden by Default) -->
-        <section id="activationSection" class="glass-card activation-card hidden">
-            <div class="activation-header">
-                <h2>⚡ Activate Sovereign Node</h2>
-                <p>To participate in the NCH Sovereign Network, receive rewards, and view your downline tree, you must register your node on the network.</p>
-            </div>
-            
-            <div class="activation-form">
-                <div class="form-group">
-                    <label>Your Node Wallet Address</label>
-                    <input type="text" id="activationYourAddress" readonly value="Not Connected" class="input-readonly">
+            <!-- Web3 Wallet Connection & Registration -->
+            <div style="display: flex; flex-direction: column; gap: 1rem; align-items: center;">
+                <button onclick="connectWeb3Wallet()" class="btn-primary btn-large" style="width: 100%;">
+                    Connect Web3 Wallet
+                </button>
+                
+                <div style="text-align: center; color: var(--text-muted); font-size: 0.75rem; margin: 0.5rem 0; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">
+                    — OR ENTER WALLET ADDRESS MANUALLY —
                 </div>
                 
-                <div class="form-group">
-                    <label>Sponsor Wallet Address / Referral Code</label>
-                    <input type="text" id="activationSponsorInput" placeholder="Enter sponsor address (or default to Genesis node)">
-                    <small class="form-help">Enter a sponsor's address or referral code. If you don't have one, it defaults to the Genesis root node.</small>
-                </div>
+                <input type="text" id="manualWalletInput" placeholder="0x... Enter 42-char EVM address" style="width: 100%; text-align: center; font-family: monospace; font-size: 0.85rem;">
+                <button onclick="connectManualWalletAddress()" class="btn-secondary btn-large" style="width: 100%; padding: 0.6rem; font-size: 0.8rem;">
+                    🔑 Enter with Wallet Address
+                </button>
                 
-                <div class="form-group">
-                    <label>Placement Position</label>
-                    <div class="leg-selector">
-                        <button type="button" class="leg-btn active" id="activationLegL" onclick="selectActivationLeg('L')">Left Leg (L)</button>
-                        <button type="button" class="leg-btn" id="activationLegR" onclick="selectActivationLeg('R')">Right Leg (R)</button>
+                <span id="connectionStatus" style="font-size: 0.75rem; color: var(--text-muted); text-align: center;">Connect your EVM wallet to access the dashboard</span>
+            </div>
+
+            <!-- Web3 Registration Card (Hidden until connection if not registered) -->
+            <div id="registerFormContainer" class="hidden" style="margin-top: 1.5rem; border-top: 1px solid var(--card-border); padding-top: 1.5rem;">
+                <h2 style="font-size: 1.1rem; margin-bottom: 1rem; text-align: center;">📝 Create Your Profile</h2>
+                <form id="web3RegisterForm" onsubmit="handleWeb3Registration(event)" class="space-y-4">
+                    <div class="form-group">
+                        <label>Desired Username</label>
+                        <input type="text" id="regUsername" required placeholder="e.g. Satoshi77" pattern="[a-zA-Z0-9_]{3,20}">
+                        <span class="form-help">3-20 characters, alphanumeric and underscore only</span>
                     </div>
-                    <small class="form-help">Specify which of the sponsor's extreme legs to be placed under.</small>
+                    <div class="form-group">
+                        <label>Sponsor Username (Optional)</label>
+                        <input type="text" id="regSponsor" placeholder="e.g. sponsor_username">
+                    </div>
+                    <div class="form-group">
+                        <label>Preferred Placement Leg</label>
+                        <div class="leg-selector">
+                            <button type="button" id="regLegL" onclick="selectRegLeg('L')" class="leg-btn active" style="padding: 0.5rem; width: 100%;">Left Leg (L)</button>
+                            <button type="button" id="regLegR" onclick="selectRegLeg('R')" class="leg-btn" style="padding: 0.5rem; width: 100%;">Right Leg (R)</button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-accent btn-large" style="margin-top: 1rem; width: 100%;">
+                        🚀 Register Node & Enter
+                    </button>
+                </form>
+            </div>
+
+
+        </div>
+    </div>
+
+    <!-- Main Application View (Hidden until Login) -->
+    <div id="appView" class="hidden">
+        <header class="navbar">
+            <div class="nav-brand">
+                <div class="logo-circle">⚡</div>
+                <div class="brand-text">
+                    <span class="brand-title">Tier Leverage</span>
+                    <span class="brand-sub">Tier Leverage</span>
                 </div>
-                
-                <button class="btn-primary btn-large" onclick="activateSovereignNode()">
-                    ⚡ Activate Node & Join Network
+            </div>
+
+            <div class="nav-right">
+                <!-- User Profile Summary in Navbar -->
+                <div class="profile-summary" id="profileSummary">
+                    <img id="navAvatar" src="" alt="avatar" class="nav-avatar">
+                    <div class="nav-user-info">
+                        <span id="navUsername" class="nav-username">username</span>
+                        <span id="navWallet" class="nav-email" style="font-family: monospace; font-size: 0.7rem;">0x...</span>
+                    </div>
+                </div>
+
+                <div class="status-badge" onclick="switchCheeseBlockchain()">
+                    <span class="pulse-dot"></span>
+                    <span id="networkStatus">Switch Chain L1</span>
+                </div>
+                <button class="btn-secondary" onclick="handleLogout()" style="padding: 0.5rem 1rem;">
+                    Sign Out
                 </button>
             </div>
-        </section>
+        </header>
 
-        <!-- Stats Grid Cards -->
-        <section class="stats-grid">
-            <div class="stat-card left-leg">
-                <div class="stat-icon">⬅️</div>
-                <div class="stat-info">
-                    <span class="stat-label">LEFT LEG VOLUME</span>
-                    <span class="stat-value" id="leftVol">0 NCH</span>
-                    <span class="stat-sub" id="leftCarry">Carryover: 0 NCH</span>
-                </div>
-            </div>
+        <!-- Sidebar Navigation Tabs -->
+        <div class="app-layout">
+            <aside class="sidebar-nav">
+                <button class="side-tab active" onclick="switchTab('dashboard')">👤 Profile & Stats</button>
+                <button class="side-tab" onclick="switchTab('packages')">⚡ Packages & Activation</button>
+                <button class="side-tab" onclick="switchTab('tree')">View Downlines</button>
+                <button class="side-tab" onclick="switchTab('withdrawals')">💸 Wallet & Withdrawals</button>
+                <button class="side-tab hidden" onclick="switchTab('admin')" id="adminTabBtn">⚙️ Admin Override</button>
+            </aside>
 
-            <div class="stat-card right-leg">
-                <div class="stat-icon">➡️</div>
-                <div class="stat-info">
-                    <span class="stat-label">RIGHT LEG VOLUME</span>
-                    <span class="stat-value" id="rightVol">0 NCH</span>
-                    <span class="stat-sub" id="rightCarry">Carryover: 0 NCH</span>
-                </div>
-            </div>
+            <main class="container app-content">
+                <!-- Tab: Profile & Dashboard Stats -->
+                <div id="tab-dashboard" class="tab-content">
+                    <section class="hero-section" style="margin-bottom: 2rem;">
+                        <div class="hero-content">
+                            <h1>Welcome back, <span id="dashWelcomeName" style="color: var(--primary);">Trader</span>!</h1>
+                            <p>Node management dashboard. Share your link to spillover referrals and match leg volumes.</p>
+                        </div>
+                        <div class="wallet-card" id="userWalletCard">
+                            <span class="wallet-label">LINKED EVM NODE</span>
+                            <span class="wallet-address" id="activeAddress">0x...</span>
+                            <span class="wallet-rank-badge" id="activeRank">Member</span>
+                        </div>
+                    </section>
 
-            <div class="stat-card earnings">
-                <div class="stat-icon">💰</div>
-                <div class="stat-info">
-                    <span class="stat-label">TOTAL MATCHING EARNED</span>
-                    <span class="stat-value" id="totalEarned">0 NCH</span>
-                    <span class="stat-sub">10% Weak Leg Payout</span>
-                </div>
-            </div>
 
-            <div class="stat-card direct-refs">
-                <div class="stat-icon">👥</div>
-                <div class="stat-info">
-                    <span class="stat-label">DIRECT REFERRALS</span>
-                    <span class="stat-value" id="directCount">0</span>
-                    <span class="stat-sub">Direct Sponsored Members</span>
-                </div>
-            </div>
-        </section>
 
-        <!-- Main Workspace: Tree Visualizer & Actions -->
-        <div class="workspace-grid">
-            <!-- Left Side: Interactive Tree -->
-            <div class="glass-card tree-card">
-                <div class="card-header">
-                    <h2>🌲 Interactive Tree Visualizer</h2>
-                    <button class="btn-secondary" onclick="refreshTree()">🔄 Refresh Tree</button>
-                </div>
-                <div class="tree-container" id="treeContainer">
-                    <div class="tree-placeholder">Connect a wallet or enter an address to view the Tree</div>
-                </div>
-            </div>
 
-            <!-- Right Side: Referral Sharing & Activation -->
-            <div class="right-column">
-                <!-- Referral Share Box -->
-                <div class="glass-card">
-                    <div class="card-header">
-                        <h2>🔗 Referral Link & Placement</h2>
-                    </div>
 
-                    <div class="form-group">
-                        <label>Your Referral Code</label>
-                        <div class="input-group">
-                            <input type="text" id="refCodeInput" readonly value="CHEESE-XXXX">
-                            <button class="btn-icon" onclick="copyRefCode()">📋 Copy</button>
+                    <!-- Stats Grid -->
+                    <div class="stats-grid">
+                        <div class="stat-card left-leg">
+                            <div class="stat-icon">⬅️</div>
+                            <div class="stat-info">
+                                <span class="stat-label">LEFT LEG VOLUME</span>
+                                <span class="stat-value" id="leftVol">0 USDT</span>
+                                <span class="stat-sub" id="leftCarry">Carryover: 0 USDT</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card right-leg">
+                            <div class="stat-icon">➡️</div>
+                            <div class="stat-info">
+                                <span class="stat-label">RIGHT LEG VOLUME</span>
+                                <span class="stat-value" id="rightVol">0 USDT</span>
+                                <span class="stat-sub" id="rightCarry">Carryover: 0 USDT</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card earnings">
+                            <div class="stat-icon">💰</div>
+                            <div class="stat-info">
+                                <span class="stat-label">TOTAL EARNED</span>
+                                <span class="stat-value" id="totalEarned">0 USDT</span>
+                                <span class="stat-sub">All matching, yield, and direct bonuses</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card direct-refs">
+                            <div class="stat-icon">👥</div>
+                            <div class="stat-info">
+                                <span class="stat-label">DIRECT REFERRALS</span>
+                                <span class="stat-value" id="directCount">0</span>
+                                <span class="stat-sub" id="directActiveSub">0 Active Nodes</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Target Leg Preference</label>
-                        <div class="leg-selector">
-                            <button class="leg-btn active" id="legBtnL" onclick="selectLeg('L')">Left Leg (L)</button>
-                            <button class="leg-btn" id="legBtnR" onclick="selectLeg('R')">Right Leg (R)</button>
+                    <!-- Share Link card -->
+                    <div class="glass-card" style="margin-top: 2rem;">
+                        <h2>🔗 Referral & Placement Settings</h2>
+                        <div class="grid grid-cols-2 gap-4" style="margin-top: 1rem;">
+                            <div class="form-group">
+                                <label>Your Username</label>
+                                <input type="text" id="profileUsernameVal" readonly class="input-readonly" value="unset">
+                            </div>
+                            <div class="form-group">
+                                <label>Default Leg Preference for New Joins</label>
+                                <div class="leg-selector">
+                                    <button class="leg-btn active" id="legBtnL" onclick="selectLeg('L')">Left Leg (L)</button>
+                                    <button class="leg-btn" id="legBtnR" onclick="selectLeg('R')">Right Leg (R)</button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Shareable Link</label>
-                        <div class="input-group">
-                            <input type="text" id="shareLinkInput" readonly value="https://nch-marketing.onrender.com/?ref=...&leg=L">
-                            <button class="btn-icon" onclick="copyShareLink()">🔗 Copy Link</button>
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label>Your Shareable Invitation Link</label>
+                            <div class="input-group">
+                                <input type="text" id="shareLinkInput" readonly value="http://localhost:4000/?ref=...">
+                                <button class="btn-icon" onclick="copyShareLink()">🔗 Copy Link</button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Simulation & Volume Injection -->
-                <div class="glass-card">
-                    <div class="card-header">
-                        <h2>⚡ Simulate Node Activation & Volume</h2>
-                    </div>
+                <!-- Tab: Packages & Activation -->
+                <div id="tab-packages" class="tab-content hidden">
+                    <div class="glass-card">
+                        <h2>⚡ Activate Package Tier</h2>
+                        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+                            Unlock your wallet commissions and earn daily package yields by activating a package tier.
+                        </p>
 
-                    <div class="form-group">
-                        <label>Register Member Under Current Node</label>
-                        <div class="input-group">
-                            <input type="text" id="newMemberAddress" placeholder="0x... Wallet Address">
-                            <button class="btn-primary" onclick="registerMember()">+ Register</button>
+                        <!-- Package Selection -->
+                        <div class="grid grid-cols-6 gap-3" style="margin-bottom: 2rem;">
+                            <div class="package-tier-card cursor-pointer active" onclick="selectPackageTier(100, this)">
+                                <div class="package-name">Tier 1</div>
+                                <div class="package-usdt">100 USDT</div>
+                                <div class="package-yield">0.1% / day</div>
+                            </div>
+                            <div class="package-tier-card cursor-pointer" onclick="selectPackageTier(300, this)">
+                                <div class="package-name">Tier 2</div>
+                                <div class="package-usdt">300 USDT</div>
+                                <div class="package-yield">0.3% / day</div>
+                            </div>
+                            <div class="package-tier-card cursor-pointer" onclick="selectPackageTier(500, this)">
+                                <div class="package-name">Tier 3</div>
+                                <div class="package-usdt">500 USDT</div>
+                                <div class="package-yield">0.5% / day</div>
+                            </div>
+                            <div class="package-tier-card cursor-pointer" onclick="selectPackageTier(1000, this)">
+                                <div class="package-name">Tier 4</div>
+                                <div class="package-usdt">1000 USDT</div>
+                                <div class="package-yield">1.0% / day</div>
+                            </div>
+                            <div class="package-tier-card cursor-pointer" onclick="selectPackageTier(3000, this)">
+                                <div class="package-name">Tier 5</div>
+                                <div class="package-usdt">3000 USDT</div>
+                                <div class="package-yield">3.0% / day</div>
+                            </div>
+                            <div class="package-tier-card cursor-pointer" onclick="selectPackageTier(5000, this)">
+                                <div class="package-name">Tier 6</div>
+                                <div class="package-usdt">5000 USDT</div>
+                                <div class="package-yield">5.0% / day</div>
+                            </div>
+                        </div>
+
+                        <!-- Activation details -->
+                        <div class="grid grid-cols-2 gap-4" style="border-top: 1px solid var(--card-border); padding-top: 1.5rem;">
+                            <div>
+                                <h3 style="margin-bottom: 1rem;">Payment Details</h3>
+                                <div class="space-y-3" style="font-size: 0.85rem;">
+                                    <div class="flex justify-between">
+                                        <span class="text-muted">Selected Tier Value:</span>
+                                        <span id="payTierUsdt" class="font-bold text-white">100 USDT</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-muted">Current NCH Rate:</span>
+                                        <span id="payNchPrice" class="font-bold text-emerald-400">1 NCH = 0.02 USDT</span>
+                                    </div>
+                                    <div class="flex justify-between" style="border-top: 1px dashed var(--card-border); padding-top: 0.5rem; font-size: 1rem;">
+                                        <span class="font-bold">Required NCH:</span>
+                                        <span id="payRequiredNch" class="font-bold text-white" style="color: var(--primary);">5,000 NCH</span>
+                                    </div>
+                                    <div class="form-group" style="margin-top: 1rem;">
+                                        <label>Platform Master Vault Wallet</label>
+                                        <div class="input-group">
+                                            <input type="text" id="payMasterAddress" readonly class="input-readonly" value="0x3801490C9f806c917b8CbA710Db9135FA3B116ae" style="font-size: 0.75rem;">
+                                            <button class="btn-icon" onclick="copyMasterAddress()">Copy</button>
+                                        </div>
+                                    </div>
+                                    <button class="btn-primary btn-large" onclick="payWithWeb3Wallet()" style="margin-top: 1rem;">
+                                        ⚡ Pay NCH via Connected Web3 Wallet
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 style="margin-bottom: 1rem;">Verify Activation Transaction</h3>
+                                <form onsubmit="handleActivatePackage(event)" class="space-y-4">
+                                    <div class="form-group">
+                                        <label>USDT Package Amount</label>
+                                        <input type="number" id="activateUsdtAmount" readonly class="input-readonly" value="100">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Blockchain Transaction Hash</label>
+                                        <input type="text" id="activateTxHash" placeholder="0x... Enter transaction hash here" required>
+                                    </div>
+                                    <button type="submit" class="btn-accent btn-large">
+                                        🚀 Verify & Activate Node
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="form-group">
-                        <label>Add NCH Mining Volume (BV)</label>
-                        <div class="input-group">
-                            <input type="number" id="volumeAmountInput" value="1000" placeholder="1000">
-                            <button class="btn-primary" onclick="addVolume()">📈 Add Volume</button>
-                        </div>
-                    </div>
-
-                    <button class="btn-accent" onclick="triggerMatching()">
-                        🚀 Trigger Pair Matching Calculation (10%)
-                    </button>
                 </div>
-            </div>
+
+                <!-- Tab: Binary Tree -->
+                <div id="tab-tree" class="tab-content hidden">
+                    <div class="glass-card tree-card">
+                        <div class="card-header">
+                            <h2>Interactive Downlines</h2>
+                            <button class="btn-secondary" onclick="refreshTree()">🔄 Refresh Tree</button>
+                        </div>
+                        <div class="tree-container" id="treeContainer">
+                            <div class="tree-placeholder">Connecting and loading visual tree...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Wallet & Withdrawals -->
+                <div id="tab-withdrawals" class="tab-content hidden">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="glass-card">
+                            <h2>💸 Wallet Balances</h2>
+                            <div style="margin-top: 1.5rem; margin-bottom: 2rem;">
+                                <div class="text-muted" style="font-size: 0.75rem; text-transform: uppercase; tracking: 1px;">Withdrawable Balance</div>
+                                <div class="text-white font-bold" id="wdrawUsdtBalance" style="font-size: 2.5rem; margin: 0.25rem 0;">0.00 USDT</div>
+                                <div id="wdrawLockBadge" class="badge bg-rose-500/20 text-rose-400 font-bold" style="display:inline-block; font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 6px;">
+                                    🔒 Wallet Locked (Needs Package Activation)
+                                </div>
+                            </div>
+
+                            <form onsubmit="handleWithdrawalRequest(event)" class="space-y-4" style="border-top: 1px solid var(--card-border); padding-top: 1.5rem;">
+                                <h3 style="font-size: 0.95rem;">Request On-Chain Withdrawal</h3>
+                                <div class="form-group">
+                                    <label>Payout EVM Wallet Address (Auto-filled)</label>
+                                    <input type="text" id="wdrawAddress" readonly class="input-readonly" value="No linked wallet">
+                                </div>
+                                <div class="form-group">
+                                    <label>Amount (USDT equivalent value to receive in NCH)</label>
+                                    <input type="number" step="0.01" id="wdrawAmount" placeholder="Min 10 USDT" required>
+                                </div>
+                                <button type="submit" id="wdrawSubmitBtn" class="btn-primary btn-large">
+                                    Submit Withdrawal Request
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Earnings log & commissions breakdown -->
+                        <div class="glass-card">
+                            <h2>📊 Earnings Log</h2>
+                            <div class="table-responsive" style="margin-top: 1rem; max-height: 400px; overflow-y: auto;">
+                                <table class="data-table" style="font-size: 0.75rem;">
+                                    <thead>
+                                        <tr>
+                                            <th>Type</th>
+                                            <th>Amount (USDT)</th>
+                                            <th>Date / Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="earningsTableBody">
+                                        <tr><td colspan="3" class="text-center">No earnings records found</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Withdrawal Requests History -->
+                    <section class="glass-card full-width" style="margin-top: 2rem;">
+                        <div class="card-header">
+                            <h2>📜 Withdrawal Requests History</h2>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Request ID</th>
+                                        <th>EVM Address</th>
+                                        <th>Amount (USDT)</th>
+                                        <th>Requested Date</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="withdrawalHistoryTableBody">
+                                    <tr><td colspan="5" class="text-center">No withdrawal records found</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Tab: Admin Panel -->
+                <div id="tab-admin" class="tab-content hidden">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="glass-card">
+                            <h2>⚙️ Admin Control & Settings</h2>
+                            <form onsubmit="handleUpdateNchPrice(event)" class="space-y-4" style="margin-top: 1.5rem;">
+                                <div class="form-group">
+                                    <label>NCH/USDT Price (Manual Admin update)</label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.000001" id="adminNchPriceInput" value="0.02" required>
+                                        <button type="submit" class="btn-primary">Update Price</button>
+                                    </div>
+                                </div>
+                            </form>
+
+                            <div style="margin-top: 2rem; border-top: 1px solid var(--card-border); padding-top: 1.5rem;" class="space-y-4">
+                                <h3>Calculation Controls</h3>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button onclick="triggerAdminYields()" class="btn-secondary btn-large">
+                                        💰 Process Daily Yields (0.1%–5%)
+                                    </button>
+                                    <button onclick="triggerAdminMatching()" class="btn-accent btn-large">
+                                        🔄 Process Pairing Bonuses
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pending Withdrawal approvals -->
+                        <div class="glass-card">
+                            <h2>💸 Pending Withdrawal Approvals</h2>
+                            <div class="table-responsive" style="margin-top: 1rem; max-height: 400px; overflow-y: auto;">
+                                <table class="data-table" style="font-size: 0.75rem;">
+                                    <thead>
+                                        <tr>
+                                            <th>Wallet</th>
+                                            <th>Amount (USDT)</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adminWithdrawalsTableBody">
+                                        <tr><td colspan="3" class="text-center">No pending withdrawals</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
         </div>
-
-        <!-- Recent Commission History -->
-        <section class="glass-card full-width">
-            <div class="card-header">
-                <h2>📜 Recent Payout Commissions</h2>
-            </div>
-            <div class="table-responsive">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Transaction ID</th>
-                            <th>Type</th>
-                            <th>Weak Leg Volume</th>
-                            <th>Matching Commission</th>
-                            <th>Date / Time</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="commissionTableBody">
-                        <tr>
-                            <td colspan="6" class="text-center">No commission records found</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    </main>
+    </div>
 
     <footer class="footer">
-        <p>© 2026 NCH Sovereign Network. Dedicated Sovereign Infrastructure.</p>
+        <p>© 2026 Tier Leverage. Dedicated Infrastructure.</p>
     </footer>
 
     <script src="app.js"></script>
