@@ -4,6 +4,9 @@ const fs = require('fs');
 
 const dbPath = process.env.DB_PATH || path.join(__dirname, 'nch-mlm.db');
 
+// Ensure target directory exists for custom DB_PATH (e.g., persistent volume /data/nch-mlm.db)
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+
 class MLMDatabase {
     constructor() {
         this.db = new sqlite3.Database(dbPath, (err) => {
