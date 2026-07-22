@@ -11,8 +11,20 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Helper: Get setting value
+// Helper: Get setting value (with live DEX price synchronization for NCH)
 async function getSetting(key, fallback = '') {
+    if (key === 'nch_usdt_price') {
+        try {
+            const dexUrl = process.env.CEX_HYBRID_URL || 'https://cexhybrid.up.railway.app';
+            const res = await fetch(`${dexUrl}/api/market-prices`);
+            const data = await res.json();
+            if (data && data.success && data.prices && data.prices.NCH && data.prices.NCH.usd > 0) {
+                return data.prices.NCH.usd.toString();
+            }
+        } catch (e) {
+            console.warn('⚠️ Could not reach CEX Hybrid DEX price endpoint, using DB fallback:', e.message);
+        }
+    }
     const row = await db.get("SELECT value FROM system_settings WHERE key = ?", [key]);
     return row ? row.value : fallback;
 }
